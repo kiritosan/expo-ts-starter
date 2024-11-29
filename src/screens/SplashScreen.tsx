@@ -5,6 +5,8 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
+
 
 
 const { width, height } = Dimensions.get('window');
@@ -51,33 +53,34 @@ export default function SplashScreen() {
   };
 
   return (
-    <TouchableOpacity 
-      style={[styles.container, { paddingTop: insets.top }]}
+    <TouchableOpacity
+      style={[styles.container]}
       onPress={handleSkip}
       activeOpacity={1}
     >
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Animated.View
-        entering={FadeIn.duration(1000)}
-        style={styles.contentContainer}
-      >
-        <View style={styles.textContainer}>
-          <Text style={styles.goForText}>GO FOR</Text>
-          <Text style={styles.habitsText}>BETTER{'\n'}HABITS</Text>
-          <View style={styles.withContainer}>
-            <Text style={styles.withText}>WITH</Text>
-            <Text style={styles.moeText}>MOE</Text>
-            <View style={styles.underline} />
+      <StatusBar style="light" />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <Animated.View
+          entering={FadeIn.duration(1000)}
+          style={styles.contentContainer}
+        >
+          <View style={styles.textContainer}>
+            <Text style={styles.goForText}>GO FOR</Text>
+            <Text style={styles.habitsText}>BETTER{'\n'}HABITS</Text>
+            <View style={styles.withContainer}>
+              <Text style={styles.withText}>WITH</Text>
+              <Text style={styles.moeText}>MOE</Text>
+              <View style={styles.underline} />
+            </View>
           </View>
-        </View>
 
-        <View style={styles.characterContainer}>
-          <MoeCharacter />
-          <SpeechBubble />
-        </View>
-      </Animated.View>
-    </View>
-      </TouchableOpacity>
+          <View style={styles.characterContainer}>
+            <MoeCharacter />
+            <SpeechBubble />
+          </View>
+        </Animated.View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -85,6 +88,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1A1A1A',
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   contentContainer: {
     flex: 1,
