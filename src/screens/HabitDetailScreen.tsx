@@ -5,6 +5,9 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
+
+
 
 
 type RootStackParamList = {
@@ -83,7 +86,7 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
   const habitName = route.params?.habitName || 'Go for a walk';
   const [isTimerStarted, setIsTimerStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(3 * 60); // 20 minutes in seconds
   const [sound, setSound] = useState<Audio.Sound>();
 
   useEffect(() => {
@@ -105,6 +108,27 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
       console.log('Error playing sound:', error);
     }
   };
+
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.goBack();
+  };
+
+  const handleStart = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setIsTimerStarted(true);
+    await playSound();
+  };
+
+  const handleTimeAdjust = (amount: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!isTimerStarted) {
+      setTimeLeft(prev => Math.max(60, Math.min(3600, prev + amount)));
+    }
+  };
+
+
+
 
   useEffect(() => {
     if (isTimerStarted && timeLeft > 0) {
@@ -130,10 +154,6 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleStart = async () => {
-    setIsTimerStarted(true);
-    await playSound();
-  };
 
   if (!isCompleted) {
     return (
@@ -142,7 +162,7 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
           <Text style={styles.title}>{habitName}</Text>
           <TouchableOpacity
             style={styles.closeButton}
-            onPress={() => navigation.goBack()}
+            onPress={handleClose}
           >
             <Text style={styles.closeButtonText}>×</Text>
           </TouchableOpacity>
@@ -155,13 +175,28 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={styles.controls}>
-            <TouchableOpacity style={styles.controlButton}>
+
+            <TouchableOpacity
+              style={[
+                styles.controlButton,
+                { opacity: isTimerStarted ? 0.5 : 1 }
+              ]}
+              onPress={() => handleTimeAdjust(-60)}
+              disabled={isTimerStarted}
+            >
               <Text style={styles.controlText}>-</Text>
             </TouchableOpacity>
             <View style={styles.timeDisplay}>
               <Text style={styles.timeDisplayText}>{formatTime(timeLeft)}</Text>
             </View>
-            <TouchableOpacity style={styles.controlButton}>
+            <TouchableOpacity
+              style={[
+                styles.controlButton,
+                { opacity: isTimerStarted ? 0.5 : 1 }
+              ]}
+              onPress={() => handleTimeAdjust(60)}
+              disabled={isTimerStarted}
+            >
               <Text style={styles.controlText}>+</Text>
             </TouchableOpacity>
           </View>
