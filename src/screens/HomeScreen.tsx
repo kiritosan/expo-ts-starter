@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -96,6 +96,28 @@ const HabitItem = ({ icon, title, status, time, isLast = false, onPress }: Habit
 export default function HomeScreen({ navigation }: Props) {
 
   const insets = useSafeAreaInsets();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const dates = useMemo(() => {
+    const result = [];
+    const daysOfWeek = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+    for (let i = -4; i <= 4; i++) {
+      const date = new Date(selectedDate);
+      date.setDate(date.getDate() + i);
+      result.push({
+        date,
+        dayName: daysOfWeek[date.getDay()]
+      });
+    }
+
+    return result;
+  }, [selectedDate]);
+
   // 添加习惯点击处理函数
   const handleHabitPress = (habitName: string) => {
     navigation.navigate('HabitDetail', { habitName });
@@ -112,20 +134,31 @@ export default function HomeScreen({ navigation }: Props) {
           showsHorizontalScrollIndicator={false}
           style={styles.calendar}
         >
-          {DATES.map((date, index) => (
-            <View key={date} style={styles.dateContainer}>
-              <Text style={styles.dayText}>{DAYS[index % 7]}</Text>
-              <View style={[
-                styles.dateCircle,
-                date === 17 && styles.dateCircleActive
-              ]}>
+          {dates.map(({ date, dayName }) => {
+            const isSelected = date.toDateString() === selectedDate.toDateString();
+            return (
+              <TouchableOpacity
+                key={date.toISOString()}
+                style={styles.dateContainer}
+                onPress={() => handleDateSelect(date)}
+                activeOpacity={0.7}
+              >
                 <Text style={[
-                  styles.dateText,
-                  date === 17 && styles.dateTextActive
-                ]}>{date}</Text>
-              </View>
-            </View>
-          ))}
+                  styles.dayText,
+                  isSelected && { color: '#4CAF50', fontWeight: 'bold' }
+                ]}>{dayName}</Text>
+                <View style={[
+                  styles.dateCircle,
+                  isSelected && { backgroundColor: '#4CAF50' }
+                ]}>
+                  <Text style={[
+                    styles.dateText,
+                    isSelected && { color: '#FFFFFF', fontWeight: 'bold' }
+                  ]}>{date.getDate()}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* 提示区域 */}
@@ -155,6 +188,7 @@ export default function HomeScreen({ navigation }: Props) {
             title="Read fiction"
             status="skip"
             time="15 min"
+            onPress={() => handleHabitPress('Read fiction')}  // Add this line
           />
           <HabitItem
             icon="🛏️"
@@ -162,6 +196,7 @@ export default function HomeScreen({ navigation }: Props) {
             status="done"
             time="1 time"
             isLast={true}
+            onPress={() => handleHabitPress('To inhabit the bed')}  // Add this line
           />
         </View>
       </ScrollView>
