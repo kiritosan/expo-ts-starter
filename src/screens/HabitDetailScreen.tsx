@@ -1,9 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Audio } from 'expo-av';
+
+
+type RootStackParamList = {
+  Home: undefined;
+  HabitDetail: { habitName: string };
+};
+
+type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
+
+const TimerCharacter = () => (
+  <Svg width={80} height={80} viewBox="0 0 80 80">
+    <Path
+      d="M40 10L70 70H10L40 10Z"
+      fill="#4CAF50"
+      stroke="#263238"
+      strokeWidth="2"
+    />
+    <Circle cx="35" cy="45" r="3" fill="#263238" />
+    <Circle cx="45" cy="45" r="3" fill="#263238" />
+    <Path
+      d="M32 55C35 58 45 58 48 55"
+      stroke="#263238"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </Svg>
+);
 
 // MOE 角色组件
 const MoeCharacter = () => (
@@ -50,23 +78,126 @@ const Decorations = () => (
   </View>
 );
 
-type RootStackParamList = {
-  Home: undefined;
-  HabitDetail: { habitName: string };
-};
-
-type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
-
 export default function HabitDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const habitName = route.params?.habitName || 'Go for a walk';
+  const [isTimerStarted, setIsTimerStarted] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 minutes in seconds
+  const [sound, setSound] = useState<Audio.Sound>();
+
+  useEffect(() => {
+    return sound
+      ? () => {
+        sound.unloadAsync();
+      }
+      : undefined;
+  }, [sound]);
+
+  const playSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/audio/Christmas-Countdown-Long-Version-chosic.com_.mp3')
+      );
+      setSound(sound);
+      await sound.playAsync();
+    } catch (error) {
+      console.log('Error playing sound:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isTimerStarted && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setIsCompleted(true);
+            sound?.stopAsync();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [isTimerStarted, timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleStart = async () => {
+    setIsTimerStarted(true);
+    await playSound();
+  };
+
+  if (!isCompleted) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{habitName}</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.closeButtonText}>×</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.timerContent}>
+          <View style={styles.timerCircle}>
+            <TimerCharacter />
+            <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+          </View>
+
+          <View style={styles.controls}>
+            <TouchableOpacity style={styles.controlButton}>
+              <Text style={styles.controlText}>-</Text>
+            </TouchableOpacity>
+            <View style={styles.timeDisplay}>
+              <Text style={styles.timeDisplayText}>{formatTime(timeLeft)}</Text>
+            </View>
+            <TouchableOpacity style={styles.controlButton}>
+              <Text style={styles.controlText}>+</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.tipsContainer}>
+            <Text style={styles.tipsTitle}>Helpful tips</Text>
+            <View style={styles.tipItem}>
+              <Text style={styles.tipIcon}>🚰</Text>
+              <Text style={styles.tipText}>Bring a water bottle with you</Text>
+            </View>
+            <View style={styles.tipItem}>
+              <Text style={styles.tipIcon}>⏰</Text>
+              <Text style={styles.tipText}>If you start to feel tired, take a break</Text>
+            </View>
+          </View>
+
+          {!isTimerStarted && (
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStart}
+            >
+              <Text style={styles.startButtonText}>Start</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  }
+
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* 顶部标题和关闭按钮 */}
       <View style={styles.header}>
         <Text style={styles.title}>{habitName}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.closeButton}
           onPress={() => navigation.goBack()}
         >
@@ -77,8 +208,8 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
       {/* 主要内容区域 */}
       <View style={styles.content}>
         <Decorations />
-        
-        <Animated.View 
+
+        <Animated.View
           entering={FadeIn.duration(1000)}
           style={styles.characterContainer}
         >
@@ -107,7 +238,7 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
         </View>
 
         {/* 完成按钮 */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.finishButton}
           onPress={() => {
             // TODO: 处理完成逻辑
@@ -152,6 +283,93 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#1A1A1A',
   },
+  timerContent: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  timerCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 2,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+  },
+  timerText: {
+    fontSize: 32,
+    fontWeight: '600',
+    marginTop: 10,
+  },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 30,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 25,
+    padding: 5,
+  },
+  controlButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlText: {
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  timeDisplay: {
+    paddingHorizontal: 20,
+  },
+  timeDisplayText: {
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  tipsContainer: {
+    width: '100%',
+    marginTop: 40,
+    padding: 20,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 15,
+  },
+  tipsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  tipIcon: {
+    fontSize: 20,
+    marginRight: 10,
+  },
+  tipText: {
+    fontSize: 16,
+    color: '#666666',
+  },
+  startButton: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: '#000000',
+    paddingVertical: 15,
+    borderRadius: 30,
+  },
+  startButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
     alignItems: 'center',
@@ -191,32 +409,6 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   timeText: {
-    fontSize: 16,
-    color: '#1A1A1A',
-  },
-  tipsContainer: {
-    width: '100%',
-    marginTop: 30,
-  },
-  tipsTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginBottom: 15,
-  },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 10,
-  },
-  tipIcon: {
-    fontSize: 20,
-    marginRight: 10,
-  },
-  tipText: {
     fontSize: 16,
     color: '#1A1A1A',
   },
